@@ -34,7 +34,7 @@ jobs:
 
       # gcc/winlibs e la cache di compilazione: ~2 minuti risparmiati a ogni run.
       - name: Cache toolchain Nuitka
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~\AppData\Local\Nuitka
           key: nuitka-${{ runner.os }}-v1
