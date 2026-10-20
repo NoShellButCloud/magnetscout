@@ -27,10 +27,11 @@ import threading
 import time
 import unicodedata
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATE_FILE = os.path.join(BASE_DIR, "xdcc_downloads.json")
+from paths import DATA_DIR, data_path
 
-DEFAULT_DIR = os.path.join(BASE_DIR, "downloads")
+STATE_FILE = data_path("xdcc_downloads.json")
+
+DEFAULT_DIR = os.path.join(DATA_DIR, "downloads")
 DEFAULT_NICK = "MagnetScout"
 MAX_PARALLEL = 3
 

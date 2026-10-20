@@ -14,6 +14,7 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from html import unescape
 
+from paths import data_path
 from sourcebase import (Filters, MAGNET_RE, Source, feed_ts, guess_media,
                         http_json, http_json_post, http_text, http_bytes,
                         iso_ts, lang_fields, looks_adult, magnet_hash,
@@ -810,8 +811,7 @@ class AcademicTorrentsSource(Source):
     default = False
     DB_URL = "https://academictorrents.com/database.xml"
     TTL_SECONDS = 24 * 3600
-    CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "academictorrents_cache.xml")
+    CACHE_FILE = data_path("academictorrents_cache.xml")
     _ITEM_RE = re.compile(r"<item>(.*?)</item>", re.S)
     _FIELD_RE = re.compile(r"<(\w+)>(.*?)</\1>", re.S)
     _cache: list = []

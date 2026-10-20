@@ -19,8 +19,9 @@ import os
 import threading
 import time
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PREFS_FILE = os.path.join(BASE_DIR, "preferences.json")
+from paths import data_path
+
+PREFS_FILE = data_path("preferences.json")
 
 FILTER_KEYS = ("q", "mtype", "lang", "genre", "res", "quality", "size", "match", "sort")
 MAX_PROFILES = 50

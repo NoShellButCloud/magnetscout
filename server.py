@@ -12,6 +12,7 @@ import os
 import sys
 import threading
 import time
+import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -20,15 +21,14 @@ import dnsclient
 import preferences
 import xdcc
 import xdccdl
+from paths import STATIC_DIR
 from taxonomy import GENRE_LABELS, LANG_NAMES, LANG_ORDER, QUALITY_LABELS
 from textutil import human_size, resolution_rank
+from version import __version__
 from sources import (KIND_LABELS, KINDS, Filters, archive_magnet,
                      current_sources, custom_definitions, delete_custom_source,
                      discover, magnet_for_torrent_url, search_all,
                      sort_results, upsert_custom_source)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 CACHE_TTL_SECONDS = 180
 _cache: dict = {}
@@ -66,6 +66,7 @@ SORT_OPTIONS = [
 
 def meta_payload() -> dict:
     return {
+        "version": __version__,
         "sources": [s.info() for s in current_sources()],
         "custom_sources": custom_definitions(),
         "custom_kinds": [{"code": k, "label": KIND_LABELS[k]} for k in KINDS],
@@ -187,7 +188,7 @@ def run_xdcc_search(params: dict):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "MagnetScout/1.0"
+    server_version = f"MagnetScout/{__version__}"
     protocol_version = "HTTP/1.1"
 
     # ------------------------------------------------------------- helpers
@@ -423,6 +424,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="MagnetScout - ricerca magnet in locale")
+    parser.add_argument("--version", action="version",
+                        version=f"MagnetScout {__version__}")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true",
@@ -460,7 +463,7 @@ def main():
         sys.exit(1)
 
     url = f"http://{args.host}:{httpd.server_address[1]}/"
-    print(f"MagnetScout in ascolto su {url}  (Ctrl+C per fermare)", flush=True)
+    print(f"MagnetScout {__version__} in ascolto su {url}  (Ctrl+C per fermare)", flush=True)
     if not args.no_browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     try:
@@ -471,4 +474,17 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    except Exception:
+        traceback.print_exc()
+        # Doppio clic sull'eseguibile: senza attesa la finestra si chiuderebbe
+        # subito e l'errore non sarebbe leggibile.
+        if getattr(sys, "frozen", False):
+            try:
+                input("\nErrore imprevisto: premi Invio per chiudere.")
+            except EOFError:
+                pass
+        sys.exit(1)

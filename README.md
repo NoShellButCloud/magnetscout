@@ -27,6 +27,29 @@ server Python (vedi [Perché serve il server](#perché-serve-il-server-locale)).
 > solo materiale che hai il diritto di scaricare, rispettando le leggi del tuo
 > Paese. Il testo completo è in **[DISCLAIMER.md](DISCLAIMER.md)**.
 
+## Download (Windows)
+
+Niente Python, niente installazione: scarica `MagnetScout.exe` dalla pagina
+[**Releases**](https://github.com/NoShellButCloud/magnetscout/releases/latest)
+(~8 MB) e avvialo con un doppio clic. Il browser si apre da solo su
+`http://127.0.0.1:8765/`.
+
+- Windows 10/11 a 64 bit.
+- L'eseguibile **non è firmato**: al primo avvio SmartScreen può chiedere
+  conferma — *Ulteriori informazioni* → *Esegui comunque*. La build è
+  automatica da questo codice via GitHub Actions, quindi puoi anche
+  ricompilarlo da solo.
+- Tienilo in una cartella **scrivibile** (Desktop, Documenti): preferenze,
+  coda e download nascono accanto all'eseguibile, non in AppData.
+- Ogni release include `MagnetScout.exe.sha256` per verificare l'integrità.
+
+Per compilarlo in proprio:
+
+```powershell
+python -m pip install pyinstaller
+python -m PyInstaller --clean --noconfirm magnetscout.spec
+```
+
 ## Requisiti
 
 - Python 3.9+ (nessuna dipendenza: solo libreria standard)
@@ -331,6 +354,10 @@ textutil.py       estrazione da titoli (risoluzione, qualità, lingua, dimension
                   confronto esatto ignorando i separatori)
 torrent.py        parser bencode minimale + costruzione link magnet
 taxonomy.py       nomi lingue, etichette qualità, generi canonici
+paths.py          percorsi di risorse e dati (sorgente vs eseguibile)
+version.py        versione dell'applicazione
+magnetscout.spec  build dell'eseguibile Windows (PyInstaller)
+packaging/        metadati di versione dell'exe
 static/           interfaccia web (HTML/CSS/JS vanilla, nessun build step):
                   app.js = sezione Torrent, portal.js = sezioni e XDCC/Download
 ```

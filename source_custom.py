@@ -20,6 +20,7 @@ import re
 import threading
 import urllib.parse
 
+from paths import data_path
 from sourcebase import (Filters, Source, http_json, http_text, iso_ts,
                         lang_fields, make_result, magnet_from_url,
                         parse_feed_items, slugify, to_int, extract_magnets)
@@ -27,8 +28,7 @@ from textutil import (detect_3d, detect_quality, detect_resolution, parse_size,
                       primary_lang)
 from torrent import DEFAULT_TRACKERS, build_magnet
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CUSTOM_FILE = os.path.join(BASE_DIR, "custom_sources.json")
+CUSTOM_FILE = data_path("custom_sources.json")
 
 KINDS = ("rss", "json", "html", "link")
 KIND_LABELS = {
