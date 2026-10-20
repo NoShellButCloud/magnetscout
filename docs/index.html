@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MagnetScout — Portale locale per torrent e XDCC</title>
+<meta name="description" content="Portale locale per cercare magnet torrent e pacchetti XDCC da un'unica interfaccia. Progetto didattico, solo libreria standard di Python.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121924;
+    --panel2: #0f1620;
+    --border: #223042;
+    --text: #e7eef7;
+    --muted: #8ba0b8;
+    --accent: #4f8cff;
+    --accent2: #7c5cff;
+    --good: #2ecc71;
+    --warn: #f1c40f;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1100px 600px at 15% -10%, #16233a 0%, transparent 60%),
+      radial-gradient(900px 500px at 95% 0%, #1d1836 0%, transparent 55%),
+      var(--bg);
+    background-repeat: no-repeat;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, kbd {
+    font-family: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------------------------------------------------------------- header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(11, 15, 20, .82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(34, 48, 66, .7);
+  }
+  .nav {
+    display: flex; align-items: center; gap: 22px;
+    padding: 14px 0;
+  }
+  .brand {
+    font-size: 19px; font-weight: 700; letter-spacing: .3px;
+    display: flex; align-items: center; gap: 9px; color: var(--text);
+  }
+  .brand:hover { text-decoration: none; }
+  .brand .logo { filter: drop-shadow(0 0 9px rgba(79, 140, 255, .6)); }
+  .nav-links { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+  .nav-links a { color: var(--muted); }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+  /* ------------------------------------------------------------------ hero */
+  .hero { padding: 76px 0 44px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; letter-spacing: .4px; text-transform: uppercase;
+    color: #9fc3ff; background: rgba(79, 140, 255, .1);
+    border: 1px solid rgba(79, 140, 255, .28);
+    padding: 5px 12px; border-radius: 999px;
+  }
+  h1 {
+    font-size: clamp(34px, 5.2vw, 56px);
+    line-height: 1.08; letter-spacing: -.8px;
+    margin: 20px 0 16px;
+  }
+  h1 .grad {
+    background: linear-gradient(100deg, #79a8ff 0%, #a78bfa 55%, #7ee2a8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .lead { font-size: clamp(16px, 2vw, 19px); color: #b7c7da; max-width: 680px; margin: 0 0 26px; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 11px 20px; border-radius: 11px; font-weight: 600; font-size: 15px;
+    border: 1px solid transparent; transition: transform .15s ease, filter .15s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 10px 26px -12px rgba(79, 140, 255, .8);
+  }
+  .btn-ghost { color: var(--text); border-color: var(--border); background: #0d141d; }
+  .hero-note {
+    margin-top: 18px; font-size: 13.5px; color: var(--muted);
+    display: flex; align-items: flex-start; gap: 8px; max-width: 640px;
+  }
+
+  /* ------------------------------------------------------- finestra finta */
+  .window {
+    margin: 42px 0 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    box-shadow: 0 40px 80px -50px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .02) inset;
+    overflow: hidden;
+  }
+  .window-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 15px; border-bottom: 1px solid var(--border);
+    background: #0d141d;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3b4f; }
+  .dot.r { background: #e05b5b; } .dot.y { background: #e0b45b; } .dot.g { background: #5bd07a; }
+  .window-title { margin-left: 8px; font-size: 12px; color: var(--muted); }
+  .window-body { padding: 18px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab {
+    font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted); background: #0d141d;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .tab.on {
+    color: #fff; border-color: transparent;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+  .tab .count {
+    background: rgba(0, 0, 0, .35); color: #fff;
+    border-radius: 999px; padding: 0 7px; font-size: 11px;
+  }
+  .searchbar {
+    display: flex; gap: 9px; margin-bottom: 14px;
+  }
+  .fake-input {
+    flex: 1; padding: 11px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: #0d141d; color: #9fb4cc; font-size: 14px;
+  }
+  .fake-btn {
+    padding: 0 20px; border-radius: 10px; font-size: 14px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left; font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 11px 10px; border-bottom: 1px solid rgba(34, 48, 66, .55); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tname { color: #dbe6f3; }
+  .tmeta { font-size: 11.5px; color: var(--muted); margin-top: 4px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .num { white-space: nowrap; color: #c9d7ea; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px;
+    border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+    white-space: nowrap;
+  }
+  .b-it { color: #7ee2a8; border-color: rgba(126, 226, 168, .3); }
+  .b-xdcc { color: #ffd79a; border-color: rgba(255, 215, 154, .3); }
+  .b-nibl { color: #9fc3ff; border-color: rgba(159, 195, 255, .3); }
+  .b-res { color: #c4b5fd; border-color: rgba(196, 181, 253, .3); }
+  .cmd {
+    font-size: 11px; color: #b7c7da; background: #0a1017;
+    border-radius: 5px; padding: 1px 6px;
+  }
+  .act {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--border); background: #101923; font-size: 13px;
+  }
+  .preview-caption {
+    margin: 12px 2px 0; font-size: 12px; color: var(--muted); text-align: right;
+  }
+
+  /* ---------------------------------------------------------------- sezioni */
+  section { padding: 58px 0; }
+  section.tight { padding-top: 26px; }
+  h2 { font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -.4px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 30px; max-width: 700px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    padding: 22px;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 17px; display: flex; align-items: center; gap: 9px; }
+  .card .kicker { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+  .card ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: #b7c7da; }
+  .card li { margin: 6px 0; }
+  .card li b { color: var(--text); font-weight: 600; }
+
+  /* mini scheda download */
+  .dlcard {
+    margin-top: 16px; border: 1px solid var(--border); border-radius: 10px;
+    background: #0d141d; padding: 12px;
+  }
+  .dlcard-top { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin-bottom: 9px; }
+  .dlcard-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dbe6f3; }
+  .st { font-size: 10.5px; font-weight: 600; color: #7ee2a8; border: 1px solid rgba(126, 226, 168, .35); border-radius: 999px; padding: 1px 7px; }
+  .bar { height: 7px; border-radius: 999px; background: #23334a; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 62%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .dlcard-info { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ---------------------------------------------------------------- passi */
+  .steps { display: grid; gap: 14px; counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start;
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    background: rgba(18, 25, 36, .6);
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    font-size: 13px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+  .step h3 { margin: 2px 0 6px; font-size: 15px; }
+  .step p { margin: 0; color: #b7c7da; font-size: 13.5px; }
+  pre {
+    position: relative;
+    background: #080d13; border: 1px solid var(--border); border-radius: 10px;
+    padding: 13px 15px; overflow-x: auto; font-size: 13px; color: #cfe0f2;
+    margin: 10px 0 0;
+  }
+  pre .c { color: #6b8bab; }
+  .copy {
+    position: absolute; top: 8px; right: 8px;
+    border: 1px solid var(--border); background: #101923; color: var(--muted);
+    border-radius: 7px; padding: 4px 9px; font-size: 11px; cursor: pointer;
+    font-family: inherit;
+  }
+  .copy:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ---------------------------------------------------------------- box */
+  .box {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: rgba(18, 25, 36, .65);
+    padding: 20px 22px; font-size: 14px; color: #b7c7da;
+  }
+  .box h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); }
+  .box p { margin: 0 0 10px; }
+  .box p:last-child { margin-bottom: 0; }
+
+  .warnbox {
+    border-left: 3px solid var(--warn);
+    background: rgba(241, 196, 15, .06);
+    border-top: 1px solid rgba(241, 196, 15, .18);
+    border-right: 1px solid rgba(241, 196, 15, .18);
+    border-bottom: 1px solid rgba(241, 196, 15, .18);
+    border-radius: 10px; padding: 20px 22px;
+  }
+  .warnbox h3 { margin: 0 0 10px; font-size: 16px; color: #ffe08a; }
+  .warnbox p { margin: 0 0 10px; font-size: 14px; color: #d6dde6; }
+  .warnbox p:last-child { margin-bottom: 0; }
+  .warnbox strong { color: #fff; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 26px 0 40px; color: var(--muted); font-size: 12.5px;
+  }
+  .foot { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+
+  @media (max-width: 860px) {
+    .cards { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .hero { padding: 48px 0 30px; }
+    table { font-size: 12.5px; }
+    thead th:nth-child(3), tbody td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top"><span class="logo">🧭</span> MagnetScout</a>
+    <nav class="nav-links">
+      <a href="#funzioni">Funzioni</a>
+      <a href="#avvio">Avvio</a>
+      <a href="#perche">Perché in locale</a>
+      <a href="#disclaimer">Disclaimer</a>
+      <a href="https://github.com/NoShellButCloud/magnetscout">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================================================ hero -->
+  <div class="wrap hero">
+    <span class="eyebrow">🧪 Progetto didattico · solo libreria standard di Python</span>
+    <h1>Cerca e scarica<br><span class="grad">da un'unica interfaccia.</span></h1>
+    <p class="lead">
+      Magnet torrent e pacchetti XDCC in un portale che gira <strong>sul tuo computer</strong>.
+      Nessun account, nessun cloud, nessuna telemetria: un processo Python, un browser,
+      i tuoi file.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href="https://github.com/NoShellButCloud/magnetscout">Apri il repository ↗</a>
+      <a class="btn btn-ghost" href="#avvio">Come avviarlo</a>
+    </div>
+    <p class="hero-note">
+      <span aria-hidden="true">⚠️</span>
+      <span>Questa pagina è una <strong>vetrina statica</strong>: non esegue ricerche e non scarica nulla.
+      L'app funziona solo in locale, perché ha bisogno del server Python.</span>
+    </p>
+
+    <!-- anteprima dell'interfaccia -->
+    <div class="window" aria-label="Anteprima dell'interfaccia con dati di esempio">
+      <div class="window-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="window-title">127.0.0.1:8765 — MagnetScout</span>
+      </div>
+      <div class="window-body">
+        <div class="tabs">
+          <span class="tab on">🧲 Torrent</span>
+          <span class="tab">📦 XDCC</span>
+          <span class="tab">⬇️ Download <span class="count">2</span></span>
+        </div>
+        <div class="searchbar">
+          <div class="fake-input">🔍 toy story 5</div>
+          <div class="fake-btn">Cerca</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Pacchetto</th><th>Lingua</th><th>Qualità</th><th>Dimensione</th><th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="tname">Toy Story 4 (2019) 1080p H264 iTA-ENG AC3 5.1 sub iTA-ENG</div>
+                <div class="tmeta"><span class="badge b-it">🇮🇹 ITA</span><span class="badge">🎬 Film</span><span class="badge">Knaben</span></div>
+              </td>
+              <td><span class="badge b-it">🇮🇹 Italiano</span></td>
+              <td><span class="badge b-res">1080p</span> <span class="badge">BluRay</span></td>
+              <td class="num">4,10 GB</td>
+              <td><span class="act" title="Copia magnet">🧲</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="tname">[SubsPlease] Frieren - 01 (1080p) [HEVC]</div>
+                <div class="tmeta"><span class="badge b-xdcc">xdcc.eu</span><span class="badge">🌐 Rizon</span><span class="cmd">Illum xdcc send #2012</span></div>
+              </td>
+              <td><span class="badge">🇯🇵 Giapponese</span></td>
+              <td><span class="badge b-res">1080p</span> <span class="badge">WEB</span></td>
+              <td class="num">1,40 GB</td>
+              <td><span class="act" title="Scarica">⬇️</span> <span class="act" title="Copia comando">📋</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="tname">[HorribleSubs] One Piece - 01 [1080p].mkv</div>
+                <div class="tmeta"><span class="badge b-nibl">NIBL</span><span class="badge">🌐 Rizon</span><span class="cmd">HorribleSubs xdcc send #25</span></div>
+              </td>
+              <td><span class="badge">🇯🇵 Giapponese</span></td>
+              <td><span class="badge b-res">1080p</span></td>
+              <td class="num">572 MB</td>
+              <td><span class="act" title="Scarica">⬇️</span> <span class="act" title="Copia comando">📋</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="preview-caption">Anteprima statica con dati di esempio — nessuna ricerca reale.</p>
+  </div>
+
+  <!-- ========================================================== funzioni -->
+  <section id="funzioni">
+    <div class="wrap">
+      <h2>Tre sezioni, un solo posto</h2>
+      <p class="sub">Cercare, scegliere, scaricare. Le stesse filtri e la stessa lingua dell'interfaccia in ogni sezione, senza schede sparse.</p>
+      <div class="cards">
+        <article class="card">
+          <h3>🧲 Torrent</h3>
+          <p class="kicker">13 fonti pubbliche</p>
+          <ul>
+            <li><b>Filtri</b> per lingua, tipo, genere, risoluzione, qualità e dimensione</li>
+            <li><b>Verifica</b> del nome reale dentro il magnet prima di aprirlo</li>
+            <li><b>Fonti personalizzate</b> (RSS, JSON, HTML, link) e crawler</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>📦 XDCC</h3>
+          <p class="kicker">xdcc.eu + NIBL</p>
+          <ul>
+            <li><b>Due motori</b> interrogati in parallelo, risultati alternati</li>
+            <li><b>Filtro episodio</b> e comando IRC già pronto da copiare</li>
+            <li><b>Scarica tutti</b> i risultati di una serie in un clic</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>⬇️ Download</h3>
+          <p class="kicker">coda IRC/DCC</p>
+          <ul>
+            <li><b>Avanzamento</b>, velocità, tempo rimanente per ogni file</li>
+            <li><b>Pausa e ripresa</b> con DCC RESUME, anche dopo un riavvio</li>
+            <li><b>Cartella</b> e download simultanei configurabili</li>
+          </ul>
+          <div class="dlcard">
+            <div class="dlcard-top">
+              <span class="dlcard-name">Frieren - 01 (1080p).mkv</span>
+              <span class="st">Scaricamento</span>
+            </div>
+            <div class="bar"><span></span></div>
+            <div class="dlcard-info">
+              <span>612 MB / 1,40 GB</span><span>2,1 MB/s</span><span>mancano 4m</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= avvio -->
+  <section id="avvio" class="tight">
+    <div class="wrap">
+      <h2>Avvio in tre passi</h2>
+      <p class="sub">Serve solo Python 3.9 o successivo. Niente pip, niente dipendenze, niente build.</p>
+      <div class="steps">
+        <div class="step">
+          <div>
+            <h3>Clona il repository</h3>
+            <pre><button class="copy" data-copy="git clone https://github.com/NoShellButCloud/magnetscout.git">copia</button>git clone https://github.com/NoShellButCloud/magnetscout.git
+<span class="c">cd magnetscout</span></pre>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Avvia il server</h3>
+            <pre><button class="copy" data-copy="python server.py">copia</button>python server.py</pre>
+            <p style="margin-top:8px">Solo libreria standard: nessuna installazione aggiuntiva.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3>Apri il browser</h3>
+            <p>Si apre da solo su <a href="http://127.0.0.1:8765/">http://127.0.0.1:8765/</a>. L'host è limitato a
+            <code>localhost</code>: l'interfaccia non è raggiungibile dalla rete.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ perché -->
+  <section id="perche" class="tight">
+    <div class="wrap">
+      <div class="box">
+        <h3>Perché non funziona direttamente su GitHub Pages</h3>
+        <p>GitHub Pages serve <strong>solo file statici</strong>. MagnetScout invece è composto da un
+        server Python che interroga gli indici, fa da proxy DNS, parla IRC e riceve i file via DCC,
+        e da un'interfaccia che chiama le sue API. Pages non esegue Python, non apre connessioni verso
+        IRC e non può scrivere file sul tuo disco; inoltre gli indici non consentono chiamate dirette
+        dal browser (CORS).</p>
+        <p>Per questo questa pagina è una vetrina: l'unico modo per usare il programma è avviarlo sul
+        tuo computer. Non esiste e non è previsto un backend pubblico del progetto.</p>
+        <p><a href="https://github.com/NoShellButCloud/magnetscout#perch%C3%A9-serve-il-server-locale">Dettagli nel README ↗</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= disclaimer -->
+  <section id="disclaimer" class="tight">
+    <div class="wrap">
+      <div class="warnbox">
+        <h3>⚠️ Avvertenza legale</h3>
+        <p>MagnetScout è un progetto <strong>didattico</strong>, nato per studiare protocolli di rete
+        (BitTorrent, IRC/DCC, DNS). <strong>Non ospita, non memorizza e non distribuisce alcun contenuto</strong>:
+        è un client locale che interroga indici pubblici di terzi su richiesta dell'utente.</p>
+        <p><strong>Nessuna affiliazione</strong> con i siti indice, i tracker, le reti IRC, i bot o i titolari
+        dei diritti. Nomi e marchi appartengono ai rispettivi proprietari.</p>
+        <p>Il software è fornito <strong>“così com'è”, senza garanzie</strong>, e l'autore
+        <strong>non assume alcuna responsabilità</strong> per l'uso che ne viene fatto, per i contenuti
+        cercati o scaricati, né per danni diretti o indiretti. <strong>L'utente è l'unico responsabile</strong>:
+        scarica solo materiale che ha il diritto di scaricare e rispetta le leggi del proprio Paese.</p>
+        <p><a href="https://github.com/NoShellButCloud/magnetscout/blob/main/DISCLAIMER.md">Leggi il disclaimer completo ↗</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>🧭 MagnetScout — progetto didattico, nessuna affiliazione.</span>
+    <span>
+      <a href="https://github.com/NoShellButCloud/magnetscout">Codice</a> ·
+      <a href="https://github.com/NoShellButCloud/magnetscout/blob/main/README.md">Documentazione</a> ·
+      <a href="https://github.com/NoShellButCloud/magnetscout/blob/main/DISCLAIMER.md">Disclaimer</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll(".copy").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var text = button.getAttribute("data-copy");
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(text).then(function () {
+        var old = button.textContent;
+        button.textContent = "copiato";
+        setTimeout(function () { button.textContent = old; }, 1400);
+      });
+    });
+  });
+</script>
+</body>
+</html>

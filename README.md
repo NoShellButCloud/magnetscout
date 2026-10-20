@@ -3,6 +3,10 @@
 Il tuo **portale locale per il download** (gira sul tuo PC, niente servizi
 esterni): un'unica interfaccia con tre sezioni.
 
+🌐 **Vetrina:** <https://noshellbutcloud.github.io/magnetscout/> — è una pagina
+statica descrittiva: l'app funziona **solo in locale**, perché ha bisogno del
+server Python (vedi [Perché serve il server](#perché-serve-il-server-locale)).
+
 - **🧲 Torrent** — cerca magnet di film e serie TV su più indici pubblici, con
   filtri per **lingua**, **tipo**, **genere**, **risoluzione**, qualità e
   dimensione; motore per **fonti personalizzate** e **crawler** che scopre nuove
@@ -11,6 +15,17 @@ esterni): un'unica interfaccia con tre sezioni.
   clic: il trasferimento avviene in background.
 - **⬇️ Download** — la coda dei file XDCC: avanzamento, velocità, tempo
   rimanente, pausa/ripresa, cartella di destinazione.
+
+> [!WARNING]
+> **Avvertenza legale.** MagnetScout è un progetto **didattico** di studio dei
+> protocolli di rete. **Non ospita, non memorizza e non distribuisce alcun
+> contenuto**: è un client locale che interroga indici pubblici di terzi su
+> richiesta dell'utente. **Non è affiliato** ad alcun sito, tracker, rete IRC,
+> bot o titolare di diritti. È fornito **"così com'è", senza garanzie**, e
+> **l'autore non assume alcuna responsabilità** per l'uso che ne viene fatto:
+> sei tu l'unico responsabile di ciò che cerchi e scarichi, e devi scaricare
+> solo materiale che hai il diritto di scaricare, rispettando le leggi del tuo
+> Paese. Il testo completo è in **[DISCLAIMER.md](DISCLAIMER.md)**.
 
 ## Requisiti
 
@@ -330,6 +345,24 @@ static/           interfaccia web (HTML/CSS/JS vanilla, nessun build step):
 Il server la espone automaticamente in `/api/meta`, checkboxes incluse. Per
 fonti "una tantum" conviene invece il pannello delle fonti personalizzate.
 
+## Perché serve il server locale
+
+Il progetto è composto da due parti che non si possono separare:
+
+1. **`server.py`** — Python: interroga gli indici, fa da proxy DNS, parla IRC e
+   riceve i file via DCC, scrive su disco. Richiede un processo in esecuzione
+   sulla tua macchina e l'accesso alla rete.
+2. **`static/`** — HTML/CSS/JS: l'interfaccia, che chiama le API del server
+   (`/api/search`, `/api/xdcc/...`) sulla stessa origine.
+
+**GitHub Pages** può servire solo file statici: non esegue Python, non apre
+socket verso IRC, non scrive file e non può fare da proxy DNS. Inoltre le API
+degli indici non consentono chiamate dirette dal browser (CORS). Per questo la
+pagina pubblicata su Pages è una **vetrina**: descrive il progetto e mostra
+un'anteprima statica dell'interfaccia, mentre per usarlo davvero serve il
+server locale. Non esiste (e non è previsto) un backend pubblico di
+MagnetScout.
+
 ## Note
 
 - Tutto gira su `127.0.0.1`: l'interfaccia non è raggiungibile dalla rete.
@@ -340,3 +373,4 @@ fonti "una tantum" conviene invece il pannello delle fonti personalizzate.
 - I pacchetti XDCC sono offerti da bot di terzi su IRC: la velocità dipende dal
   bot, dalle sue code e dalla tua connessione. Scaricando più pacchetti insieme
   la banda si divide; i pacchetti grandi (decine di GB) possono durare ore.
+- **Uso consentito e responsabilità:** vedi [DISCLAIMER.md](DISCLAIMER.md).
