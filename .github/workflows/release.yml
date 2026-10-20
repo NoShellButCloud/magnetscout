@@ -1,0 +1,89 @@
+name: Release Windows
+
+# Pubblica l'eseguibile quando nasce un tag v* (es. v1.0.0).
+# workflow_dispatch permette di ricompilare e ripubblicare un tag già esistente.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da pubblicare (es. v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa PyInstaller
+        run: python -m pip install --upgrade pyinstaller
+
+      - name: Verifica che il tag corrisponda a version.py
+        shell: pwsh
+        env:
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+        run: |
+          $tag = $env:TAG_NAME.TrimStart("v").Trim()
+          $ver = (python -c "import version; print(version.__version__)").Trim()
+          if ($tag -ne $ver) {
+            throw "Il tag '$tag' non corrisponde a version.py ('$ver'). Aggiorna version.py o usa il tag giusto."
+          }
+          "Versione: $ver"
+
+      - name: Compila
+        run: python -m PyInstaller --clean --noconfirm magnetscout.spec
+
+      - name: Prova dell'eseguibile
+        shell: pwsh
+        run: |
+          $proc = Start-Process "dist\MagnetScout.exe" -ArgumentList "--port","8901","--no-browser" -PassThru
+          try {
+            $meta = $null
+            for ($i = 0; $i -lt 40; $i++) {
+              try { $meta = Invoke-RestMethod "http://127.0.0.1:8901/api/meta" -TimeoutSec 2; break }
+              catch { Start-Sleep -Milliseconds 750 }
+            }
+            if (-not $meta) { throw "L'eseguibile non risponde su 127.0.0.1:8901" }
+            if ($meta.sources.Count -lt 1) { throw "Nessuna fonte caricata" }
+            "OK: versione $($meta.version), $($meta.sources.Count) fonti, DNS $($meta.dns.mode)"
+            $page = Invoke-WebRequest "http://127.0.0.1:8901/" -UseBasicParsing -TimeoutSec 5
+            if ($page.StatusCode -ne 200) { throw "Interfaccia non servita" }
+            "OK: interfaccia HTTP $($page.StatusCode)"
+          }
+          finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Checksum SHA-256
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash "dist\MagnetScout.exe" -Algorithm SHA256).Hash.ToLower()
+          "$hash  MagnetScout.exe" | Out-File -Encoding ascii "dist\MagnetScout.exe.sha256"
+          "SHA-256: $hash"
+
+      - name: Pubblica la release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" dist/MagnetScout.exe dist/MagnetScout.exe.sha256 --clobber
+          else
+            gh release create "$TAG_NAME" dist/MagnetScout.exe dist/MagnetScout.exe.sha256 \
+              --title "MagnetScout $TAG_NAME" --notes-file .github/release-notes.md
+          fi
