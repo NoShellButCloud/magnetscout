@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MagnetScout — Portale di ricerca e download (locale)</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-row">
+    <div class="brand"><span class="logo">🧭</span> MagnetScout</div>
+    <div class="tagline">Il tuo portale di ricerca e download — gira in locale, nessuna telemetria</div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sezioni del portale">
+    <button type="button" class="tab" id="tab-torrent" data-view="torrent" role="tab" aria-selected="true">🧲 Torrent</button>
+    <button type="button" class="tab" id="tab-xdcc" data-view="xdcc" role="tab" aria-selected="false">📦 XDCC</button>
+    <button type="button" class="tab" id="tab-download" data-view="download" role="tab" aria-selected="false">⬇️ Download <span class="badge badge-dl" id="dl-badge" hidden>0</span></button>
+  </nav>
+</header>
+<main>
+  <section class="view" id="view-torrent" role="tabpanel" aria-labelledby="tab-torrent">
+  <section class="panel search-panel">
+    <form id="search-form" autocomplete="off">
+      <div class="q-wrap">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="text" id="q" placeholder="Titolo del film o della serie…  (premi / per cercare)" spellcheck="false" autofocus aria-label="Titolo da cercare">
+        <button type="button" id="clear-q" class="ghost" hidden title="Svuota il campo di ricerca" aria-label="Svuota il campo di ricerca">✕</button>
+      </div>
+      <button type="submit" id="go">Cerca</button>
+    </form>
+    <div class="filters">
+      <label>🎬 Tipo <select id="mtype"></select></label>
+      <label>🌍 Lingua <select id="lang"></select></label>
+      <label>🎭 Genere <select id="genre"></select></label>
+      <label>📺 Risoluzione <select id="res"></select></label>
+      <label>✨ Qualità <select id="quality"></select></label>
+      <label class="size-filter" title="Trascina a sinistra del tutto per nessun limite (♾️)">
+        💾 Max dimensione
+        <span class="range-wrap">
+          <input type="range" id="size" class="size-range" min="0" max="28" step="1" value="17" aria-describedby="size-out">
+          <output id="size-out" class="size-out" for="size">≤ 5 GB</output>
+        </span>
+      </label>
+      <label>🎯 Corrispondenza <select id="match"></select></label>
+      <label>↕️ Ordina <select id="sort"></select></label>
+      <button type="button" id="reset" class="ghost small" title="Azzera tutti i filtri e l'ordinamento">♻️ Azzera filtri</button>
+    </div>
+    <div class="sources">
+      <span class="sources-label">📡 Fonti:</span>
+      <div id="sources"></div>
+      <button type="button" class="ghost small" id="sources-all">tutte</button>
+      <button type="button" class="ghost small" id="sources-none">nessuna</button>
+    </div>
+  </section>
+
+  <details class="panel tools" id="tools">
+    <summary>Aggiungi fonti e scopri nuove fonti</summary>
+    <div class="tools-body">
+      <section class="tool-block">
+        <h3>Scopri una fonte</h3>
+        <p class="muted">Inserisci una parola chiave (es. <code>ilcorsaronero</code>) o un dominio: cerco il sito
+        su DuckDuckGo e <span title="Reddit spesso blocca le richieste automatiche: in quel caso si usa solo DuckDuckGo">Reddit</span>,
+        provo se espone un feed RSS, una pagina con magnet o solo una ricerca, e propongo le fonti utilizzabili.</p>
+        <form id="discover-form" autocomplete="off">
+          <input type="text" id="discover-q" placeholder="parola chiave o dominio…" spellcheck="false">
+          <button type="submit">Analizza</button>
+        </form>
+        <div id="discover-status" class="muted"></div>
+        <div id="discover-results"></div>
+      </section>
+
+      <section class="tool-block">
+        <h3>Aggiungi una fonte manualmente</h3>
+        <form id="custom-form" autocomplete="off">
+          <div class="form-grid">
+            <label>Nome <input type="text" id="cf-label" placeholder="Es. Il Corsaro Nero"></label>
+            <label>Tipo <select id="cf-kind"></select></label>
+            <label class="wide"><span class="lbl">URL di ricerca (con <code>{query}</code>)</span>
+              <input type="text" id="cf-url" placeholder="https://esempio.org/search?q={query}" spellcheck="false"></label>
+            <label class="wide"><span class="lbl">Descrizione (facoltativa)</span>
+              <input type="text" id="cf-description" placeholder="a cosa serve / note"></label>
+            <label class="wide"><span class="lbl">Impostazioni avanzate — JSON (facoltative)</span>
+              <input type="text" id="cf-extra" placeholder='{"results_path":"data.items","fields":{"title":"name"}}' spellcheck="false"></label>
+          </div>
+          <button type="submit">Aggiungi fonte</button>
+          <span class="muted">Le fonti restano salvate in <code>custom_sources.json</code> nel progetto.</span>
+        </form>
+      </section>
+
+      <section class="tool-block">
+        <h3>Fonti personalizzate</h3>
+        <div id="custom-list" class="custom-list"></div>
+      </section>
+    </div>
+  </details>
+
+  <details class="panel tools prefs" id="prefs">
+    <summary>💾 Preferenze: salva filtri e fonti</summary>
+    <div class="prefs-body">
+      <p class="muted">Salva la combinazione di filtri e fonti che usi più spesso e richiamala con un clic.
+      I profili restano in <code>preferences.json</code> accanto al progetto: nessun invio a servizi esterni.</p>
+      <div class="prefs-row">
+        <label class="pref-field wide">Profilo salvato
+          <select id="pref-list" aria-label="Profili salvati"></select>
+        </label>
+        <button type="button" id="pref-load" class="ghost small">📤 Carica</button>
+        <button type="button" id="pref-delete" class="ghost small">🗑️ Elimina</button>
+      </div>
+      <div class="prefs-row">
+        <label class="pref-field wide">Salva con nome
+          <input type="text" id="pref-name" placeholder="es. Film in italiano, Anime sub, Pubblico dominio…" spellcheck="false">
+        </label>
+        <button type="button" id="pref-save" class="ghost small">💾 Salva</button>
+      </div>
+      <div class="prefs-row">
+        <label class="chk" title="Salva su disco filtri e fonti a ogni modifica e li ripristina su questo e su altri browser">
+          <input type="checkbox" id="pref-auto" checked> Ricorda automaticamente filtri e fonti (su disco)
+        </label>
+        <span class="prefs-spacer"></span>
+        <button type="button" id="pref-export" class="ghost small">⬇️ Esporta file</button>
+        <button type="button" id="pref-import" class="ghost small">⬆️ Importa file</button>
+        <input type="file" id="pref-file" accept="application/json,.json" hidden>
+      </div>
+      <div id="pref-status" class="muted">—</div>
+    </div>
+  </details>
+
+  <section class="status">
+    <span id="status-text">Pronto.</span>
+    <span id="filter-hint" class="hint"></span>
+    <div id="source-chips" class="chips"></div>
+  </section>
+
+  <section class="toolbar" id="toolbar" hidden>
+    <span id="count"></span>
+    <button id="copy-all" class="ghost" type="button">📋 Copia tutti i magnet</button>
+    <button id="export" class="ghost" type="button">💾 Esporta .txt</button>
+  </section>
+
+  <section class="results" id="results">
+    <div class="empty">
+      <div class="empty-icon">🧭</div>
+      <div>Cerca un titolo per iniziare.</div>
+      <div class="examples">
+        <span class="muted">Prova:</span>
+        <button type="button" class="chip-btn" data-example="matrix">🎬 matrix</button>
+        <button type="button" class="chip-btn" data-example="il padrino">🍝 il padrino</button>
+        <button type="button" class="chip-btn" data-example="night of the living dead">🧟 night of the living dead</button>
+        <button type="button" class="chip-btn" data-example="breaking bad">📺 breaking bad</button>
+      </div>
+    </div>
+  </section>
+  </section>
+
+  <section class="view" id="view-xdcc" hidden role="tabpanel" aria-labelledby="tab-xdcc">
+    <section class="panel search-panel">
+      <form id="xdcc-form" autocomplete="off">
+        <div class="q-wrap">
+          <span class="search-icon" aria-hidden="true">📦</span>
+          <input type="text" id="xdcc-q" placeholder="Anime, serie, film o nome del pacchetto…  (es. frieren)" spellcheck="false" aria-label="Cosa cercare tra i pacchetti XDCC">
+          <button type="button" id="xdcc-clear" class="ghost" hidden title="Svuota il campo di ricerca" aria-label="Svuota il campo di ricerca">✕</button>
+        </div>
+        <button type="submit" id="xdcc-go">Cerca</button>
+      </form>
+      <div class="filters">
+        <label>🔢 Episodio <input type="number" id="xdcc-episode" min="1" max="999" placeholder="tutti" inputmode="numeric"></label>
+        <label>📡 Fonte <select id="xdcc-source"></select></label>
+        <label>↕️ Ordina <select id="xdcc-sort"></select></label>
+        <label class="size-filter" title="Nascondi i pacchetti più grandi di questo limite (tutto a sinistra = nessun limite)">
+          💾 Max dimensione
+          <span class="range-wrap">
+            <input type="range" id="xdcc-size" class="size-range" min="0" max="28" step="1" value="28" aria-describedby="xdcc-size-out">
+            <output id="xdcc-size-out" class="size-out" for="xdcc-size">nessun limite</output>
+          </span>
+        </label>
+        <button type="button" id="xdcc-reset" class="ghost small" title="Azzera filtri e ordinamento">♻️ Azzera filtri</button>
+      </div>
+      <p class="hint">I pacchetti XDCC arrivano dai bot IRC (xdcc.eu e NIBL): il download parte in background e lo segui nella sezione <strong>⬇️ Download</strong>.</p>
+    </section>
+
+    <section class="status">
+      <span id="xdcc-status-text">Cerca un pacchetto XDCC.</span>
+      <div id="xdcc-chips" class="chips"></div>
+    </section>
+
+    <section class="toolbar" id="xdcc-toolbar" hidden>
+      <span id="xdcc-count"></span>
+      <button id="xdcc-download-all" class="ghost" type="button">⬇️ Scarica tutti i mostrati</button>
+      <button id="xdcc-copy" class="ghost" type="button">📋 Copia i comandi</button>
+    </section>
+
+    <section class="results" id="xdcc-results">
+      <div class="empty">
+        <div class="empty-icon">📦</div>
+        <div>Cerca un pacchetto XDCC per iniziare.</div>
+        <div class="examples">
+          <span class="muted">Prova:</span>
+          <button type="button" class="chip-btn" data-xdcc-example="frieren">📦 frieren</button>
+          <button type="button" class="chip-btn" data-xdcc-example="one piece">🏴‍☠️ one piece</button>
+          <button type="button" class="chip-btn" data-xdcc-example="bocchi">🎸 bocchi</button>
+          <button type="button" class="chip-btn" data-xdcc-example="gundam">🤖 gundam</button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section class="view" id="view-download" hidden role="tabpanel" aria-labelledby="tab-download">
+    <section class="panel dl-panel">
+      <div class="dl-settings">
+        <label class="dl-dir">📁 Cartella dei download
+          <input type="text" id="dl-dir" spellcheck="false" aria-label="Cartella dove salvare i file">
+        </label>
+        <button type="button" id="dl-dir-save" class="ghost small">Salva</button>
+        <button type="button" id="dl-open" class="ghost small">📂 Apri cartella</button>
+        <label>🔀 Simultanei <select id="dl-parallel"></select></label>
+        <button type="button" id="dl-clear" class="ghost small">🧹 Rimuovi completati</button>
+      </div>
+      <div id="dl-summary" class="dl-summary muted">Nessun download.</div>
+    </section>
+
+    <section class="results" id="dl-list">
+      <div class="empty">
+        <div class="empty-icon">⬇️</div>
+        <div>Nessun download.<br>Avvia un pacchetto dalla sezione <strong>📦 XDCC</strong>.</div>
+      </div>
+    </section>
+  </section>
+</main>
+<footer>
+  <span>Uso locale · verifica di avere il diritto di scaricare i contenuti · contenuti di pubblico dominio su
+  <a href="https://archive.org/details/movies" target="_blank" rel="noopener">Internet Archive</a>
+  · <a href="https://archive.org/details/feature_films" target="_blank" rel="noopener">Feature Films</a>
+  · <span id="dns-info" title="Le richieste usano questo resolver invece del DNS del provider"></span>
+  · <span title="Scorciatoie da tastiera">⌨️ <code>/</code> o <code>Ctrl+K</code> per cercare · <code>Esc</code> per chiudere i dettagli</span></span>
+</footer>
+<div id="toast" class="toast" hidden></div>
+<script src="/static/app.js"></script>
+<script src="/static/portal.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Stato locale e dati dell'utente (non vanno pubblicati)
+preferences.json
+custom_sources.json
+xdcc_downloads.json
+downloads/
+*.part
+
+# Cache delle fonti
+academictorrents_cache.xml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor / sistema
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
