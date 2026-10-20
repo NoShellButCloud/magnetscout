@@ -29,8 +29,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Installa PyInstaller
-        run: python -m pip install --upgrade pyinstaller
+      - name: Installa Nuitka
+        run: python -m pip install --upgrade nuitka ordered-set zstandard
+
+      # gcc/winlibs e la cache di compilazione: ~2 minuti risparmiati a ogni run.
+      - name: Cache toolchain Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Nuitka
+          key: nuitka-${{ runner.os }}-v1
 
       - name: Verifica che il tag corrisponda a version.py
         shell: pwsh
@@ -45,12 +52,14 @@ jobs:
           "Versione: $ver"
 
       - name: Compila
-        run: python -m PyInstaller --clean --noconfirm magnetscout.spec
+        run: powershell -ExecutionPolicy Bypass -File build.ps1 -Python python
 
       - name: Prova dell'eseguibile
         shell: pwsh
         run: |
-          $proc = Start-Process "dist\MagnetScout.exe" -ArgumentList "--port","8901","--no-browser" -PassThru
+          $exe = "dist\MagnetScout.exe"
+          if (-not (Test-Path $exe)) { throw "Eseguibile non prodotto" }
+          $proc = Start-Process $exe -ArgumentList "--port","8901","--no-browser" -PassThru
           try {
             $meta = $null
             for ($i = 0; $i -lt 40; $i++) {
@@ -60,9 +69,21 @@ jobs:
             if (-not $meta) { throw "L'eseguibile non risponde su 127.0.0.1:8901" }
             if ($meta.sources.Count -lt 1) { throw "Nessuna fonte caricata" }
             "OK: versione $($meta.version), $($meta.sources.Count) fonti, DNS $($meta.dns.mode)"
+
             $page = Invoke-WebRequest "http://127.0.0.1:8901/" -UseBasicParsing -TimeoutSec 5
             if ($page.StatusCode -ne 200) { throw "Interfaccia non servita" }
             "OK: interfaccia HTTP $($page.StatusCode)"
+
+            # I dati utente devono finire accanto all'exe, non nella cartella
+            # temporanea del bundle onefile.
+            $body = '{"filters":{"q":"smoke"},"sources":["apibay"]}'
+            Invoke-RestMethod "http://127.0.0.1:8901/api/preferences/last" -Method Post `
+              -Body $body -ContentType "application/json" -TimeoutSec 15 | Out-Null
+            Start-Sleep -Milliseconds 500
+            if (-not (Test-Path "dist\preferences.json")) {
+              throw "preferences.json non scritto accanto all'eseguibile (percorsi errati nel bundle)"
+            }
+            "OK: dati utente accanto all'eseguibile"
           }
           finally {
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue

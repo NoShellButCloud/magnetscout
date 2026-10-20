@@ -12,6 +12,7 @@ academictorrents_cache.xml
 __pycache__/
 *.py[cod]
 .venv/
+.venv*/
 venv/
 
 # Build dell'eseguibile
@@ -24,3 +25,6 @@ dist/
 .idea/
 Thumbs.db
 desktop.ini
+
+# Log di build locali
+nuitka-build*.log

@@ -11,8 +11,8 @@ nessuna dipendenza esterna.
 Al primo avvio Windows SmartScreen può chiedere conferma perché il file non è
 firmato: *Ulteriori informazioni* → *Esegui comunque*. La build è prodotta
 automaticamente da questo repository tramite GitHub Actions; il codice
-sorgente è pubblico e puoi ricompilare l'eseguibile da solo con
-`pyinstaller --clean --noconfirm magnetscout.spec`.
+sorgente è pubblico e puoi ricompilare l'eseguibile da solo con `build.ps1`
+(Nuitka, compilazione in C).
 
 ## Integrità
 

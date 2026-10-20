@@ -31,7 +31,7 @@ server Python (vedi [Perché serve il server](#perché-serve-il-server-locale)).
 
 Niente Python, niente installazione: scarica `MagnetScout.exe` dalla pagina
 [**Releases**](https://github.com/NoShellButCloud/magnetscout/releases/latest)
-(~8 MB) e avvialo con un doppio clic. Il browser si apre da solo su
+(~7 MB) e avvialo con un doppio clic. Il browser si apre da solo su
 `http://127.0.0.1:8765/`.
 
 - Windows 10/11 a 64 bit.
@@ -43,11 +43,12 @@ Niente Python, niente installazione: scarica `MagnetScout.exe` dalla pagina
   coda e download nascono accanto all'eseguibile, non in AppData.
 - Ogni release include `MagnetScout.exe.sha256` per verificare l'integrità.
 
-Per compilarlo in proprio:
+Per compilarlo in proprio (Nuitka compila in C e scarica gcc/winlibs da solo
+al primo build):
 
 ```powershell
-python -m pip install pyinstaller
-python -m PyInstaller --clean --noconfirm magnetscout.spec
+python -m pip install nuitka ordered-set zstandard
+powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
 ## Requisiti
@@ -354,10 +355,9 @@ textutil.py       estrazione da titoli (risoluzione, qualità, lingua, dimension
                   confronto esatto ignorando i separatori)
 torrent.py        parser bencode minimale + costruzione link magnet
 taxonomy.py       nomi lingue, etichette qualità, generi canonici
-paths.py          percorsi di risorse e dati (sorgente vs eseguibile)
+paths.py          percorsi di risorse e dati (sorgente, PyInstaller, Nuitka)
 version.py        versione dell'applicazione
-magnetscout.spec  build dell'eseguibile Windows (PyInstaller)
-packaging/        metadati di versione dell'exe
+build.ps1         build dell'eseguibile Windows (Nuitka, compilato in C)
 static/           interfaccia web (HTML/CSS/JS vanilla, nessun build step):
                   app.js = sezione Torrent, portal.js = sezioni e XDCC/Download
 ```
